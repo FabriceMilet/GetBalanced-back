@@ -26,7 +26,6 @@ const userController = {
     // route pour logguer un utilisateur
     async loginUser(request, response) {
         // ici on a accès aux informations rentrées par l'utilisateur dans le formulaire
-        // console.log(request.body);
         // Récupérer les infos du form
         let {
             email,
@@ -38,58 +37,46 @@ const userController = {
         // On vérifie que cet utilisateur existe dans la db avec cet email 
         let user = await dataMapper.getOneByCondition("\"user\"", "email", email);
 
-
-        // console.log("user.password", user.password);
-
         // Si on ne trouve pas l'user, on renvoie une erreur
         if (!user) {
-            let errorMessage = 'Aucun utilisateur-trice trouvé(e) avec cet email! ';
+            console.log('pas de user trouvé');
+            let errorMessage = 'Aucun utilisateur-trice trouvé(e) avec cet email !';
             return response.status(200).json({
                 errorMessage
             });
         }
-
         console.log('utilisateur trouvé:', user);
-
 
         //on vérifie le password
         const validPassword = await bcrypt.compare(password, user.password);
-        console.log(validPassword);
+        
         if (!validPassword) {
             return response.status(401).json({
                 message: 'Incorrect password'
             });
         }
 
-
         // on appelle la méthode qui va vérifier les infos en BDD et rempli les informations de notre user
         // la méthode renvoie true ou false suivant si les informations username/password sont correctes
         let token;
         if (user) {
-
-
             // Génération du token
             token = jwt.sign({
                 email: user.email
             }, process.env.SECRET_SESSION, {
                 expiresIn: 172800
             });
-
             console.log("TOKEN : ", token);
-
         }
+        
+        // Stocker le JWT dans la session
+        request.session.token = token;
 
         // // On crée le refresh token et on le stocke en BDD 
         // const refreshToken = crypto.randomBytes(128).toString('base64');
 
-
         // // Mettre le token dans la table user
-
-
-
-
         // let insertToken = await dataMapper.updateById("\"user\"", "token = $1", refreshToken, user.id);
-
         // response.json(insertToken);
 
         // await RefreshToken.create({
@@ -97,7 +84,6 @@ const userController = {
         //     token: refreshToken,
         //     expiresAt: Date.now() + config.refreshToken.expiresIn
         // });
-
 
         // j'omet le password
         // user = ({
@@ -118,7 +104,6 @@ const userController = {
         //     color
         // });
 
-        // console.log(user);
         return response.json({
             user,
             token
@@ -132,11 +117,9 @@ const userController = {
     //             delete request.session.user;
     //     }
     // },
+
     // Ajoute un utilisateur en bdd
-
-
     async addUser(request, response) {
-
         // on récupère les données du formulaire
         let {
             firstname,
@@ -146,11 +129,7 @@ const userController = {
             confirmPassword
         } = request.body;
 
-        console.log("body", firstname, lastname, email, password, confirmPassword);
- 
         let user;
-
-
         // on vérifie que tous les champs obligatoires sont renseignés
         if (!email || !password || !confirmPassword || !firstname || !lastname) {
             let errorMessage = 'Veuillez remplir tous les champs requis.';
@@ -158,10 +137,10 @@ const userController = {
                 errorMessage
             });
         }
-        // je vérifie qu'il ny' a pas déjà cet email en BDD
+        // je vérifie qu'il n y' a pas déjà cet email en BDD
         let userWithSameEmail = await dataMapper.getByCondition("\"user\"", "email", email);
 
-        console.log("sql request", userWithSameEmail);
+        // console.log("sql request", userWithSameEmail);
         if (userWithSameEmail[0]) {
             let errorMessage = 'Cet email est déjà utilisé.';
             return response.json({
@@ -176,7 +155,6 @@ const userController = {
                 errorMessage
             });
         }
-
         // génération du hash du mot de passe
         const encryptedPassword = await bcrypt.hash(password, 10);
 
@@ -188,20 +166,23 @@ const userController = {
             password: encryptedPassword
         }, "\"user\"");
 
-
         let token = jwt.sign({
             email: email,
         }, process.env.SECRET_SESSION, {
             expiresIn: 172800
         });
 
-        console.log("TOKEN : ", token);
+        // console.log("TOKEN : ", token);
+         // Stocker le JWT dans la session
+         request.session.token = token;
 
         let inviteToPlanner = await dataMapper.getOneByCondition("invite", "user_email", email);
-        
-        if (inviteToPlanner){
-            let addPlannerAccess = await dataMapper.insertOne({user_id : user.id,
-            planner_id : inviteToPlanner.planner_id}, "user_has_planner");
+
+        if (inviteToPlanner) {
+            await dataMapper.insertOne({
+                user_id: user.id,
+                planner_id: inviteToPlanner.planner_id
+            }, "user_has_planner");
         }
 
         response.json({
@@ -221,7 +202,6 @@ const userController = {
         if (request.body.password) {
             clearPassword = request.body.password;
 
-
             const encryptedPassword = await bcrypt.hash(clearPassword, 10);
 
             request.body.password = encryptedPassword;
@@ -234,8 +214,6 @@ const userController = {
 
         let counter = 1;
 
-
-
         // pour chaque clé dans le body
         for (const key in updatedUserData) {
 
@@ -243,8 +221,6 @@ const userController = {
             counter++;
             bodyValues.push(updatedUserData[key]);
         }
-
-        console.log(bodyValues);
 
         let paramsQuery = bodyKeys.join(",");
 
@@ -255,29 +231,25 @@ const userController = {
         });
     },
 
-
     //supprime un utilisateur
     async deleteUser(request, response) {
 
         let userId = request.params.id;
-        console.log("userId du DELETE USER",userId);
+        console.log("userId du DELETE USER", userId);
         let deleteUser = await dataMapper.deleteOne("\"user\"", userId);
 
         console.log(`L'utilisateur ${deleteUser.firstname} ${deleteUser.lastname} a été supprimé`);
         return response.json(deleteUser);
     },
 
-
-
     async tokenExpire(request, response) {
 
         try {
             const token = request.headers.authorization.split(" ")[1];
-
             // on décode le token 
             const verifyToken = jwt.verify(token, process.env.SECRET_SESSION);
             let user = await dataMapper.getOneByCondition("\"user\"", "email", verifyToken.email);
-            console.log(user);
+            // console.log(user);
 
             return response.json({
                 success: "Token valide",
