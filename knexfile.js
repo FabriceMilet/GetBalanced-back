@@ -1,6 +1,7 @@
 module.exports = {
     development: {
       client: 'pg',
+      connection: process.env.DATABASE_URL,
       connection: {
         host: 'localhost',
         port:'3005',
@@ -12,7 +13,7 @@ module.exports = {
         directory: './migrations',
       },
       seeds: {
-        directory: './seeds',
+        directory: './data',
       },
     },
   
