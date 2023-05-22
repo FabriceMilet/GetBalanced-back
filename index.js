@@ -33,6 +33,10 @@ const router = require("./app/router/router");
 
 app.use(router);
 
+app.get('/', (req, res) => {
+  res.send('page de test');
+})
+
 app.listen(PORT, () => {
   console.log(`App running at http://localhost:${PORT}`)
 });
