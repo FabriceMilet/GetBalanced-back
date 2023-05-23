@@ -225,12 +225,13 @@ const dataMapper = {
         const sqlQuery = `UPDATE ${table} SET ${column} WHERE id = ${id} RETURNING *;`;
         console.log('sqlQuery', sqlQuery);
         let values = value;
-        if (sqlQuery){
+        if (column){
         try {
             response = await client.query(sqlQuery, values);
 
         } catch (error) {
-            console.error(505);
+            console.error(error);
+            throw error;
         }
         return response.rows[0];}
     },
