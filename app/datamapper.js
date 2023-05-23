@@ -224,6 +224,7 @@ const dataMapper = {
         let response;
         const sqlQuery = `UPDATE ${table} SET ${column} WHERE id = ${id} RETURNING *;`;
         let values = value;
+        if (sqlQuery){
         try {
             console.log(sqlQuery);
             response = await client.query(sqlQuery, values);
@@ -231,7 +232,7 @@ const dataMapper = {
         } catch (error) {
             console.error(505);
         }
-        return response.rows[0];
+        return response.rows[0];}
     },
 
     // renvoie les planners pour lequel l'user a été invité
