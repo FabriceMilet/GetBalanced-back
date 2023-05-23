@@ -223,10 +223,10 @@ const dataMapper = {
     async updateById(table, column, value, id) {
         let response;
         const sqlQuery = `UPDATE ${table} SET ${column} WHERE id = ${id} RETURNING *;`;
+        console.log('sqlQuery', sqlQuery);
         let values = value;
         if (sqlQuery){
         try {
-            console.log(sqlQuery);
             response = await client.query(sqlQuery, values);
 
         } catch (error) {
